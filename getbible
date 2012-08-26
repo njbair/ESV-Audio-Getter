@@ -1,0 +1,27 @@
+#!/bin/bash
+
+url="http://www.esvbible.org"
+chap="Genesis+1"
+num=0
+
+run=1
+while [ $run -eq 1 ]; do
+	num=`expr $num + 1`
+	track=`printf "%04d" $num`
+	curl -s --connect-timeout 5 --retry-delay 5 -o page.html $url/$chap/
+
+	# find the title in the meta tag
+	title=`cat page.html | grep "<meta name=\"title\"" | sed -e 's/.*content="\(.*\)" \/>/\1/' | sed 's/ /_/g'`
+	link=`cat page.html | grep "<a class=\"mp3link\"" | head -1 | sed -e 's/.*href="\(.*\)" title=.*/\1/'`
+
+	echo "Downloading $track-$title.mp3"
+	curl -# --connect-timeout 10 --retry-delay 10 -o bible/$track-$title.mp3 $link
+
+	# find the next chapter
+	prev="$chap"
+	chap=`cat page.html | grep "<li class=\"next_chapter\"" | head -1 | sed -e 's/.*href="\/\(.*\)\/">.*/\1/'`
+
+	if [ "$chap" == "$prev" ]; then
+		run=0
+	fi
+done
